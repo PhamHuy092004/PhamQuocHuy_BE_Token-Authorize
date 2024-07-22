@@ -74,6 +74,36 @@ namespace PhamQuocHuy_BE_Token_Authorize.Controllers
                 return BadRequest("Invalid user data."); // Mếu các input chứa các giá trị null, hoặc không họp lệ thì sẽ về Status 400 (Bad request)
             }
         }
+        [HttpPost("ValidateToken")]
+        public async Task<IActionResult> ValidateToken(string token)
+        {
+            // Lấy cấu hình JWT từ file cấu hình
+            var jwtConfig = Configuration.GetSection("Jwt").Get<Jwt>();
+            var khoaBiMat = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Key));
+            // Tạo đối tượng xử lý token JWT
+            var tokenHandler = new JwtSecurityTokenHandler();
+            // Cấu hình các tham số xác thực token
+            var thamSoXacThucToken = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtConfig.Issuer,
+                ValidAudience = jwtConfig.Audience,
+                IssuerSigningKey = khoaBiMat
+            };
+            try
+            {
+                // Xác thực token và lấy các claims từ token
+                var principal = tokenHandler.ValidateToken(token, thamSoXacThucToken, out SecurityToken tokenXacThuc);
+                return Ok(new { IsValid = true, Claims = principal.Claims });
+            }
+            catch (Exception ex)
+            { 
+                return Unauthorized(new { IsValid = false, Message = ex.Message });
+            }
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetUserInfo(string username, string password)
